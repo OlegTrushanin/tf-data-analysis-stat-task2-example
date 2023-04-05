@@ -11,10 +11,10 @@ def solution(p: float, x: np.array) -> tuple:
     alpha = 1 - p
     df = n - 1
     t_val = t.ppf(1 - alpha / 2, df)
+    s = np.std(x, ddof=1)
     mean_x = np.mean(x)
-    std_error = np.sqrt(1 / (2 * n))
 
-    left_bound = mean_x - t_val * std_error
-    right_bound = mean_x + t_val * std_error
+    left_bound = mean_x - t_val * s / np.sqrt(n) * np.sqrt(2 / 3)
+    right_bound = mean_x + t_val * s / np.sqrt(n) * np.sqrt(2 / 3)
 
     return [left_bound, right_bound]
