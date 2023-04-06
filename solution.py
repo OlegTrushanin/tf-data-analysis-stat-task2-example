@@ -1,32 +1,34 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import t
-
-from scipy.stats import norm
+from scipy.optimize import minimize
+from scipy.stats import expon
 
 
 chat_id = 767458283 # Ваш chat ID, не меняйте название переменной
 
 def solution(p: float, x: np.array) -> tuple:
-    n = len(x)
-    t_squared = 17 ** 2
-    y = x
-    x = np.ones((n, 2))
-    x[:, 1] = t_squared / 2
-    beta_hat = np.linalg.inv(x.T @ x) @ x.T @ y
-    a_hat = beta_hat[1]
+    time = 17.0
 
-    # вычисляем стандартную ошибку оценки
-    residuals = y - x @ beta_hat
-    mse = np.sum(residuals ** 2) / (n - 2)
-    se = np.sqrt(mse / np.sum((t_squared / 2 - np.mean(t_squared)) ** 2))
+    def negative_log_likelihood(acceleration):
+        predicted_distances = 0.5 * acceleration * time**2
+        errors = x - predicted_distances
+        return -np.sum(expon.logpdf(errors + 0.5, scale=1))
 
-    # вычисляем значение квантиля t-распределения
+    # Оценка коэффициента ускорения с помощью метода максимального правдоподобия
+    mle_result = minimize(negative_log_likelihood, 9.8)
+    mle_acceleration = mle_result.x[0]
+
+    # Построение профиля правдоподобия для оценки доверительного интервала
     alpha = 1 - p
-    t_alpha_2 = t.ppf(1 - alpha / 2, n - 2)
+    log_likelihood_mle = -mle_result.fun
+    critical_value = expon.ppf(1 - alpha / 2)
 
-    # вычисляем левую и правую границы доверительного интервала
-    ci_left = a_hat - t_alpha_2 * se
-    ci_right = a_hat + t_alpha_2 * se
+    def find_confidence_interval_bound(initial_guess, target_log_likelihood):
+        result = minimize(lambda acceleration: (negative_log_likelihood(acceleration) - target_log_likelihood)**2, initial_guess)
+        return result.x[0]
 
-    return ci_left, ci_right
+    lower_bound = find_confidence_interval_bound(mle_acceleration - 1, log_likelihood_mle + critical_value)
+    upper_bound = find_confidence_interval_bound(mle_acceleration + 1, log_likelihood_mle + critical_value)
+
+    return lower_bound, upper_bound
+
