@@ -6,22 +6,16 @@ from scipy.stats import t, expon
 chat_id = 767458283 # Ваш chat ID, не меняйте название переменной
 
 def solution(p: float, x: np.array) -> tuple:
-     # Количество измерений
-    n = len(x)
-
-    # Время эксперимента
-    t_exp = 17
-
-    # Определение ускорения и его стандартной ошибки
-    a = 2 * x.mean() / (t_exp ** 2)
-    error = expon(scale=1/2).std()
-    se_a = 2 * error / (t_exp ** 2 * np.sqrt(n))
-
-    # Вычисление границ доверительного интервала
-    df = n - 1
-    t_critical = t.ppf(1 - (1 - p) / 2, df)
-    lower = a - t_critical * se_a
-    upper = a + t_critical * se_a
-
-    return lower, upper
+    
+    n_resamples = 1000
+    alpha = 1 - p
+    
+    bootstrap_samples = np.random.choice(x, (n_resamples, len(x)), replace=True)
+    bootstrap_accelerations = 2 * np.mean(bootstrap_samples, axis=1) / 17**2
+    sorted_bootstrap_accelerations = np.sort(bootstrap_accelerations)
+    
+    lower_index = int(n_resamples * alpha / 2)
+    upper_index = int(n_resamples * (1 - alpha / 2))
+    
+    return sorted_bootstrap_accelerations[lower_index], sorted_bootstrap_accelerations[upper_index]
 
